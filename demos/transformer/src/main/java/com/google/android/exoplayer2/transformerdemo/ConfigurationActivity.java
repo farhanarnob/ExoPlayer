@@ -22,6 +22,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -39,11 +40,16 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import com.farhanrahman.file_create_on_broadcast.service.CustomBroadcastReceiverName;
+import com.farhanrahman.file_create_on_broadcast.service.FileBroadcastReceiver;
+import com.farhanrahman.file_create_on_broadcast.util.FileManager;
+import com.farhanrahman.file_create_on_broadcast.util.PermissionUtil;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.Util;
 import com.google.android.material.slider.RangeSlider;
 import com.google.android.material.slider.Slider;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -54,6 +60,7 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
  * {@link TransformerActivity}.
  */
 public final class ConfigurationActivity extends AppCompatActivity {
+  private final FileBroadcastReceiver fileBroadcastReceiver = new FileBroadcastReceiver();
   public static final String SHOULD_REMOVE_AUDIO = "should_remove_audio";
   public static final String SHOULD_REMOVE_VIDEO = "should_remove_video";
   public static final String SHOULD_FLATTEN_FOR_SLOW_MOTION = "should_flatten_for_slow_motion";
@@ -262,13 +269,22 @@ public final class ConfigurationActivity extends AppCompatActivity {
         registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             this::localFilePickerLauncherResult);
+    //        Check permission
+    PermissionUtil.INSTANCE.requestPermission(this);
+    if(PermissionUtil.INSTANCE.getPermissions().length == 0){
+      FileManager.INSTANCE.writeFile(this, FileManager.INSTANCE.createFile(this));
+    }
+    registerReceiver(fileBroadcastReceiver,
+        new IntentFilter(CustomBroadcastReceiverName.com_context_FINISH_TESTING.getStringName()));
   }
 
   @Override
   public void onRequestPermissionsResult(
       int requestCode, String[] permissions, int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
+    if(requestCode != RESULT_CANCELED) {
+      PermissionUtil.INSTANCE.checkPermissionResult(this, requestCode, permissions, grantResults);
+    }
     if (requestCode == FILE_PERMISSION_REQUEST_CODE
         && grantResults.length == 1
         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -666,4 +682,20 @@ public final class ConfigurationActivity extends AppCompatActivity {
   private static boolean isRequestSdrToneMappingSupported() {
     return Util.SDK_INT >= 31;
   }
+
+    protected void onStop() {
+      super.onStop();
+      if( PermissionUtil.INSTANCE.getPermissionToWriteAccepted()){
+        File file = FileManager.INSTANCE.createFile(this);
+        if(file!= null) {
+          FileManager.INSTANCE.writeFile(this,file);
+        }
+      }
+    }
+
+    @Override
+    protected void onDestroy() {
+      super.onDestroy();
+      unregisterReceiver(fileBroadcastReceiver);
+    }
 }

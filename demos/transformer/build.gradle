@@ -15,7 +15,13 @@
  */
 apply from: '../../constants.gradle'
 apply plugin: 'com.android.application'
+apply plugin: 'jacoco'
 
+jacoco {
+
+    toolVersion = "0.8.5"            // You can use the latest version instead of 0.8.5
+
+}
 android {
     compileSdkVersion project.ext.compileSdkVersion
 
@@ -26,6 +32,7 @@ android {
     }
 
     defaultConfig {
+        multiDexEnabled true
         versionName project.ext.releaseVersion
         versionCode project.ext.releaseVersionCode
         minSdkVersion 21
@@ -34,6 +41,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            testCoverageEnabled true
+        }
         release {
             shrinkResources true
             minifyEnabled true
@@ -71,6 +81,8 @@ android {
 
 dependencies {
     implementation 'androidx.core:core:' + androidxCoreVersion
+    implementation 'com.android.support:multidex:1.0.3'
+    implementation 'com.github.farhanarnob:FileCreateBroadcastReceiver:1.8'
     compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
     implementation 'androidx.annotation:annotation:' + androidxAnnotationVersion
     implementation 'androidx.appcompat:appcompat:' + androidxAppCompatVersion
